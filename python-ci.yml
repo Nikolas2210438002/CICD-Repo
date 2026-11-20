@@ -1,0 +1,109 @@
+name: Python CI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_COMPILE_BYTECODE: "1"
+  UV_LINK_MODE: copy
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  ruff:
+    runs-on: [self-hosted, linux]
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+          cache-local-path: ${{ github.workspace }}/.uv-cache
+
+      - name: Install locked dependencies
+        run: uv sync --locked
+
+      - name: Check lint rules
+        run: uv run --no-sync ruff check
+
+  ruff-format:
+    runs-on: [self-hosted, linux]
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+          cache-local-path: ${{ github.workspace }}/.uv-cache
+
+      - name: Install locked dependencies
+        run: uv sync --locked
+
+      - name: Check formatting
+        continue-on-error: true
+        run: uv run --no-sync ruff format --check
+
+  ty:
+    needs: [ruff, ruff-format]
+    runs-on: [self-hosted, linux]
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+          cache-local-path: ${{ github.workspace }}/.uv-cache
+
+      - name: Install locked dependencies
+        run: uv sync --locked
+
+      - name: Check types
+        run: uv run --no-sync ty check
+
+  pytest:
+    needs: ty
+    runs-on: [self-hosted, linux]
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+          cache-local-path: ${{ github.workspace }}/.uv-cache
+
+      - name: Install locked dependencies
+        run: uv sync --locked
+
+      - name: Run tests
+        run: uv run --no-sync pytest
