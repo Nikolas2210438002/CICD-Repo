@@ -13,8 +13,3 @@ if __name__ == "__main__":
     parser.add_argument("b", type=int)
     args = parser.parse_args()
     print(add(args.a, args.b))
-
-
-
-
-    
